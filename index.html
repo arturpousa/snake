@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snake · Primer projecte</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0d1415; --panel:#152124; --line:#2b3a3b; --ink:#e7f3eb; --muted:#9aaca9; --lime:#a9f27b; --accent:#6bdbb4; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(circle at 24% 0%, #1e3735 0%, transparent 44%), var(--bg); color:var(--ink); font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .shell { width:min(950px, calc(100% - 32px)); margin:30px auto; }
+    header { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin-bottom:22px; }
+    .eyebrow { color:var(--lime); font-size:12px; letter-spacing:.19em; font-weight:800; text-transform:uppercase; }
+    h1 { font-size:clamp(38px, 6vw, 60px); letter-spacing:-.065em; line-height:1; margin:9px 0 0; font-weight:820; }
+    .tech { color:var(--muted); font-size:12px; border:1px solid var(--line); border-radius:99px; padding:9px 13px; white-space:nowrap; }
+    .game { display:grid; grid-template-columns:minmax(0, 1fr) 260px; gap:16px; }
+    .board-card, .side-card { background:var(--panel); border:1px solid var(--line); border-radius:19px; padding:16px; box-shadow:0 12px 42px #0003; }
+    .stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; margin-bottom:12px; }
+    .stat { background:#0d181a; border:1px solid #29393b; border-radius:12px; padding:10px 12px; min-width:0; }
+    .stat small { display:block; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; font-size:10px; font-weight:750; margin-bottom:3px; }
+    .stat strong { font-size:23px; font-variant-numeric:tabular-nums; }
+    .stat.status strong { font-size:14px; white-space:nowrap; }
+    .board-wrap { position:relative; width:100%; aspect-ratio:1; border-radius:12px; overflow:hidden; background:#0b1719; touch-action:none; }
+    canvas { width:100%; height:100%; display:block; }
+    .overlay { position:absolute; inset:0; background:#071012bd; display:flex; align-items:center; justify-content:center; text-align:center; padding:25px; transition:opacity .16s; }
+    .overlay.hidden { opacity:0; pointer-events:none; }
+    .overlay-inner { max-width:290px; }
+    .overlay-icon { font-size:43px; line-height:1; margin-bottom:12px; }
+    .overlay h2 { margin:0 0 8px; font-size:28px; letter-spacing:-.04em; }
+    .overlay p { margin:0 0 18px; line-height:1.5; color:#bfcec9; font-size:14px; }
+    button { font:inherit; border:0; cursor:pointer; font-weight:750; user-select:none; }
+    button:focus-visible { outline:3px solid #e7f3eb; outline-offset:3px; }
+    .primary { background:var(--lime); color:#142318; border-radius:11px; padding:12px 20px; min-height:43px; }
+    .secondary { background:#263c3d; color:var(--ink); border:1px solid #44605a; border-radius:11px; padding:11px 17px; }
+    .side-card { display:flex; flex-direction:column; gap:18px; }
+    .side-card h3 { margin:0 0 7px; letter-spacing:-.02em; font-size:17px; }
+    .hint { font-size:13px; color:var(--muted); line-height:1.55; margin:0; }
+    .actions { display:flex; flex-wrap:wrap; gap:9px; }
+    .actions button { flex:1; }
+    .keys { display:grid; grid-template-columns:repeat(3, 52px); gap:7px; justify-content:center; margin:6px 0; }
+    .keys button { width:52px; height:52px; border-radius:12px; background:#28403f; color:var(--ink); border:1px solid #476461; font-size:24px; transition:background .12s, transform .12s; }
+    .keys button:active { background:#456d61; transform:scale(.94); }
+    .keys .up { grid-column:2; }
+    .keys .left { grid-column:1; grid-row:2; }
+    .keys .down { grid-column:2; grid-row:2; }
+    .keys .right { grid-column:3; grid-row:2; }
+    .footer { padding:14px 3px 2px; color:#8caaa3; font-size:12px; line-height:1.5; }
+    kbd { background:#263d3b; border:1px solid #43615b; border-radius:5px; font:inherit; font-size:11px; padding:1px 5px; }
+    @media(max-width:720px){ .shell{margin:16px auto;} header{align-items:flex-start;flex-direction:column;gap:12px;} .game{grid-template-columns:1fr;} .side-card{gap:13px;} .keys{grid-template-columns:repeat(3, 48px);} .keys button{width:48px;height:48px;} .board-card{padding:11px;} }
+    @media(prefers-reduced-motion:reduce){ .overlay,.keys button{transition:none;} }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div><div class="eyebrow">Projecte 01 · Programació</div><h1>Snake<span style="color:var(--lime)">.</span></h1></div>
+      <span class="tech">HTML · CSS · JavaScript</span>
+    </header>
+    <div class="game">
+      <section class="board-card" aria-label="Joc Snake">
+        <div class="stats">
+          <div class="stat"><small>Punts</small><strong id="score">0</strong></div>
+          <div class="stat"><small>Rècord</small><strong id="best">0</strong></div>
+          <div class="stat status"><small>Estat</small><strong id="status">Preparat</strong></div>
+        </div>
+        <div class="board-wrap" id="boardWrap">
+          <canvas id="board" width="480" height="480" aria-label="Tauler de 20 per 20 cel·les"></canvas>
+          <div class="overlay" id="overlay">
+            <div class="overlay-inner">
+              <div class="overlay-icon" id="overlayIcon">🐍</div>
+              <h2 id="overlayTitle">A jugar!</h2>
+              <p id="overlayText">Menja les pomes, creix i evita xocar amb les parets o amb tu mateix.</p>
+              <button class="primary" id="mainButton">Comença a jugar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <aside class="side-card">
+        <div><h3>Controls</h3><p class="hint">Utilitza les <strong>fletxes</strong>, les tecles <strong>W A S D</strong>, els botons o llisca el dit pel tauler.</p></div>
+        <div class="keys" aria-label="Controls de direcció">
+          <button type="button" class="up" data-dir="up" aria-label="Amunt">↑</button>
+          <button type="button" class="left" data-dir="left" aria-label="Esquerra">←</button>
+          <button type="button" class="down" data-dir="down" aria-label="Avall">↓</button>
+          <button type="button" class="right" data-dir="right" aria-label="Dreta">→</button>
+        </div>
+        <div class="actions"><button type="button" class="secondary" id="pauseButton">Pausa</button><button type="button" class="secondary" id="restartButton">Reinicia</button></div>
+        <div><h3>El teu repte</h3><p class="hint">Cada poma val <strong>10 punts</strong>. La serp s'accelera a mesura que menges. Quants punts aconseguiràs?</p></div>
+        <p class="hint">Premeu <kbd>Espai</kbd> per pausar o reprendre.</p>
+      </aside>
+    </div>
+    <div class="footer">Creat com a primera pràctica de programació. Un sol fitxer, sense instal·lacions ni dependències externes.</div>
+  </main>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const $ = id => document.getElementById(id);
+  const SIZE = 20;
+  const CELL = canvas.width / SIZE;
+  const VECTORS = {
+    up: {x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0}
+  };
+  let snake, direction, queuedDirection, apple, score, best = 0, state = 'ready', timer = null;
+  try { best = Number(localStorage.getItem('snake-personal-best') || 0); } catch(e) { /* El joc funciona sense emmagatzematge. */ }
+
+  function same(a,b){return a.x===b.x && a.y===b.y;}
+  function randomApple(){
+    const available = [];
+    for(let y=0;y<SIZE;y++) for(let x=0;x<SIZE;x++){
+      const p={x,y}; if(!snake.some(s => same(s,p))) available.push(p);
+    }
+    return available.length ? available[Math.floor(Math.random()*available.length)] : null;
+  }
+  function reset(){
+    clearInterval(timer); timer = null;
+    snake=[{x:9,y:10},{x:8,y:10},{x:7,y:10}];
+    direction=VECTORS.right; queuedDirection=VECTORS.right;
+    score=0; apple=randomApple(); state='ready';
+    updateUI(); draw(); showOverlay('🐍','A jugar!','Menja les pomes, creix i evita xocar amb les parets o amb tu mateix.','Comença a jugar');
+  }
+  function updateUI(){
+    $('score').textContent=score;
+    $('best').textContent=best;
+    $('status').textContent=({ready:'Preparat',running:'Jugant',paused:'En pausa',over:'Finalitzat',won:'Has guanyat!'})[state];
+    $('pauseButton').textContent=state==='paused' ? 'Continua' : 'Pausa';
+  }
+  function showOverlay(icon,title,description,button){
+    $('overlayIcon').textContent=icon;
+    $('overlayTitle').textContent=title;
+    $('overlayText').textContent=description;
+    $('mainButton').textContent=button;
+    $('overlay').classList.remove('hidden');
+  }
+  function hideOverlay(){$('overlay').classList.add('hidden');}
+  function intervalMs(){return Math.max(72, 145 - Math.floor(score/40)*8);}
+  function schedule(){clearInterval(timer);timer=setInterval(tick,intervalMs());}
+  function start(){
+    if(state==='over'||state==='won') reset();
+    if(state==='running') return;
+    state='running'; hideOverlay(); updateUI(); schedule();
+  }
+  function pause(){
+    if(state==='running'){
+      state='paused';clearInterval(timer);timer=null;
+      showOverlay('⏸','En pausa','La serp t’espera. Reprèn la partida quan vulguis.','Continua');
+    }else if(state==='paused')start();
+    updateUI();
+  }
+  function finish(won=false){
+    clearInterval(timer);timer=null;state=won?'won':'over';
+    showOverlay(won?'🏆':'💥',won?'Has guanyat!':'Fi de la partida',`Has aconseguit ${score} punts. Torna-ho a provar!`,'Torna a jugar');
+    updateUI();
+  }
+  function turn(name){
+    const v=VECTORS[name]; if(!v) return;
+    if(v.x===-direction.x && v.y===-direction.y) return;
+    queuedDirection=v;
+    if(state==='ready') start();
+    if(state==='over'||state==='won'){reset();queuedDirection=v;start();}
+  }
+  function tick(){
+    direction=queuedDirection;
+    const head={x:snake[0].x+direction.x,y:snake[0].y+direction.y};
+    const eats=apple && same(head,apple);
+    const body=eats?snake:snake.slice(0,-1);
+    if(head.x<0||head.y<0||head.x>=SIZE||head.y>=SIZE||body.some(part=>same(part,head))){finish();return;}
+    snake.unshift(head);
+    if(eats){
+      score+=10;
+      if(score>best){best=score;try{localStorage.setItem('snake-personal-best',String(best));}catch(e){}}
+      apple=randomApple();
+      if(!apple){draw();finish(true);return;}
+      schedule();
+    }else snake.pop();
+    updateUI();draw();
+  }
+  function rect(x,y,w,h,r,color){
+    ctx.fillStyle=color;ctx.beginPath();
+    if(typeof ctx.roundRect==='function')ctx.roundRect(x,y,w,h,r);
+    else ctx.rect(x,y,w,h);
+    ctx.fill();
+  }
+  function draw(){
+    ctx.fillStyle='#0b1719';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle='#1a2b2b';ctx.lineWidth=1;
+    for(let i=1;i<SIZE;i++){
+      const p=i*CELL+.5;
+      ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,canvas.height);ctx.moveTo(0,p);ctx.lineTo(canvas.width,p);ctx.stroke();
+    }
+    if(apple){
+      const cx=(apple.x+.5)*CELL,cy=(apple.y+.5)*CELL;
+      ctx.shadowColor='#fa8071';ctx.shadowBlur=15;
+      ctx.fillStyle='#ff806f';ctx.beginPath();ctx.arc(cx,cy,CELL*.34,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+      rect(cx-1,cy-CELL*.43,3,6,2,'#89d58d');
+    }
+    snake.forEach((p,i)=>{
+      const inset=i?2.5:1.5;
+      rect(p.x*CELL+inset,p.y*CELL+inset,CELL-2*inset,CELL-2*inset,6,i===0?'#c3f78d':'#6bddac');
+      if(i===0){
+        const cx=(p.x+.5)*CELL,cy=(p.y+.5)*CELL;
+        ctx.fillStyle='#1a3530';
+        let eyes;
+        if(direction.x!==0)eyes=[{x:cx+direction.x*5,y:cy-5},{x:cx+direction.x*5,y:cy+5}];
+        else eyes=[{x:cx-5,y:cy+direction.y*5},{x:cx+5,y:cy+direction.y*5}];
+        eyes.forEach(e=>{ctx.beginPath();ctx.arc(e.x,e.y,2,0,Math.PI*2);ctx.fill();});
+      }
+    });
+  }
+  $('mainButton').addEventListener('click',start);
+  $('pauseButton').addEventListener('click',pause);
+  $('restartButton').addEventListener('click',()=>{reset();start();});
+  document.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('click',()=>turn(b.dataset.dir)));
+  window.addEventListener('keydown',e=>{
+    const mapping={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',W:'up',S:'down',A:'left',D:'right'};
+    if(mapping[e.key]){e.preventDefault();turn(mapping[e.key]);}
+    if(e.code==='Space'){e.preventDefault();if(state==='ready'||state==='over'||state==='won')start();else pause();}
+  });
+  let touchStart=null;
+  $('boardWrap').addEventListener('pointerdown',e=>{touchStart={x:e.clientX,y:e.clientY};});
+  $('boardWrap').addEventListener('pointerup',e=>{
+    if(!touchStart)return;
+    const dx=e.clientX-touchStart.x,dy=e.clientY-touchStart.y;touchStart=null;
+    if(Math.max(Math.abs(dx),Math.abs(dy))<20)return;
+    turn(Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up');
+  });
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='running')pause();});
+  reset();
+})();
+</script>
+</body>
+</html>
